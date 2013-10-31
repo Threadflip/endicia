@@ -226,6 +226,7 @@ module Endicia
       :success => false,
       :error_message => nil,
       :status => nil,
+      :status_code => nil,
       :response_body => response_body
     }
 
@@ -244,6 +245,7 @@ module Endicia
       unless response[:error_message] = result['ErrorMsg']
         response[:status] = response_body.match(/<Status>(.+)<\/Status>/)[1]
         status_code = response_body.match(/<StatusCode>(.+)<\/StatusCode>/)[1]
+        response[:status_code] = status_code 
         response[:success] = (status_code.to_s != '-1')
       end
     end
