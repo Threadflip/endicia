@@ -1,4 +1,4 @@
-require 'rubygems'
+rsequire 'rubygems'
 require 'httparty'
 require 'active_support/core_ext'
 require 'builder'
@@ -232,7 +232,7 @@ module Endicia
 
     if options[:logger]
       options[:logger].info("\n[RESPONSE]")
-      options[:logger].info(xml)
+      options[:logger].info(result.body)
       options[:logger].info("[ENDRESPONSE]")
     end
 
@@ -415,7 +415,7 @@ module Endicia
   # appended to the URL.
   def self.els_service_url(params = {})
     params = params.to_a.map { |i| "#{i[0]}=#{i[1]}"}.join('&')
-    "http://www.endicia.com/ELS/ELSServices.cfc?wsdl&#{params}"
+    "https://www.endicia.com/ELS/ELSServices.cfc?wsdl&#{params}"
   end
 
   def self.defaults
