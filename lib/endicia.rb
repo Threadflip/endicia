@@ -1,4 +1,4 @@
-rsequire 'rubygems'
+require 'rubygems'
 require 'httparty'
 require 'active_support/core_ext'
 require 'builder'
