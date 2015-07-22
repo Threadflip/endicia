@@ -375,6 +375,86 @@ module Endicia
     response
   end
 
+  # Pass in a options hash to get all the rates available.
+  # 
+  # At minimum pass in:
+  #       MailClass: "Domestic" or "International"
+  #       ToPostalCode: ...
+  #       FromPostalCode: ...
+  #       WeightOz: ...
+  #
+  # Also pass in other stuff for more specifics, defaults listed
+  #       DateAdvance
+  #       MailpieceShape
+  #       MailpieceDimensions
+  #         Length
+  #         Width
+  #         Height
+  #       Machinable: True
+  #       LiveAnimalSurcharge: False
+  #       ToCountryCode
+  #       Services
+  #         CertifiedMail: OFF
+  #         COD: OFF
+  #         DeliveryConfirmation: OFF
+  #         ElectronicReturnReceipt: OFF
+  #         InsuredMail: OFF
+  #         RestrictedDelivery: OFF
+  #         ReturnReceipt: OFF
+  #         SignatureConfirmation: OFF
+  #         AdultSignature: OFF
+  #         AdultSignatureRestrictedDelivery: OFF
+  #       CODAmount
+  #       InsuredValue
+  #
+  # Returns a hash in the form:
+  #
+  #     {
+  #       :success => true or false
+  #       :error_message => "the message" or nil
+  #       :response_body => Raw response data from endicia
+  #       :prices => Array of hashes containing price data
+  #     }
+  def self.calculate_postage_rates(options = {})
+    url = "#{label_service_url(options)}/CalculatePostageRatesXML"
+
+    mailpiece_dimensions = options.delete(:MailpieceDimensions)
+
+    services = options.delete(:Services)
+
+    xml_body = Builder::XmlMarkup.new.PostageRatesRequest do |xml|
+      xml.RequesterID(options.delete(:RequesterID) || defaults[:RequesterID])
+      xml.CertifiedIntermediary do |ci|
+        ci.AccountID(options.delete(:AccountID) || defaults[:AccountID])
+        ci.PassPhrase(options.delete(:PassPhrase) || defaults[:PassPhrase])
+      end
+      options.each { |key, value| xml.tag!(key, value) }
+      unless services.nil?
+        xml.Services(nil, services)
+      end
+      unless mailpiece_dimensions.nil?
+        xml.MailpieceDimensions do |md|
+          mailpiece_dimensions.each { |key, value| md.tag!(key, value) }
+        end
+      end
+    end
+    body = "postageRatesRequestXML=#{xml_body}"
+
+    result = self.post(url, :body => body)
+
+    parsed = parse_result(result, "PostageRatesResponse")
+
+    if parsed[:success]
+      postage_price = result["PostageRatesResponse"]["PostagePrice"]
+      unless postage_price.is_a?(Array)
+        postage_price = [postage_price]
+      end
+      parsed[:prices] = postage_price
+    end
+
+    parsed
+  end
+
   private
 
   def self.extract(hash, keys)
@@ -405,7 +485,7 @@ module Endicia
   # (this matches the Test attribute/node value for most API calls).
   def self.label_service_url(options = {})
     test = (options[:Test] || defaults[:Test] || "NO").upcase == "YES"
-    url = test ? "https://www.envmgr.com" : "https://LabelServer.Endicia.com"
+    url = test ? "https://elstestserver.endicia.com" : "https://LabelServer.Endicia.com"
     "#{url}/LabelService/EwsLabelService.asmx"
   end
 
