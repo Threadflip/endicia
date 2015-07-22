@@ -226,12 +226,13 @@ module Endicia
       :success => false,
       :error_message => nil,
       :status => nil,
+      :status_code => nil,
       :response_body => response_body
     }
 
     if options[:logger]
       options[:logger].info("\n[RESPONSE]")
-      options[:logger].info(xml)
+      options[:logger].info(result.body)
       options[:logger].info("[ENDRESPONSE]")
     end
 
@@ -244,6 +245,7 @@ module Endicia
       unless response[:error_message] = result['ErrorMsg']
         response[:status] = response_body.match(/<Status>(.+)<\/Status>/)[1]
         status_code = response_body.match(/<StatusCode>(.+)<\/StatusCode>/)[1]
+        response[:status_code] = status_code 
         response[:success] = (status_code.to_s != '-1')
       end
     end
@@ -492,8 +494,9 @@ module Endicia
   # Pass a hash of params to have them converted to a &key=value string and
   # appended to the URL.
   def self.els_service_url(params = {})
+    url = test ? "https://elstestserver.endicia.com/ELS/ELSServices.cfc?wsdl" : "https://www.endicia.com/ELS/ELSServices.cfc?wsdl"
     params = params.to_a.map { |i| "#{i[0]}=#{i[1]}"}.join('&')
-    "http://www.endicia.com/ELS/ELSServices.cfc?wsdl&#{params}"
+    "#{url}&#{params}"
   end
 
   def self.defaults
