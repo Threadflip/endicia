@@ -494,8 +494,9 @@ module Endicia
   # Pass a hash of params to have them converted to a &key=value string and
   # appended to the URL.
   def self.els_service_url(params = {})
+    url = test ? "https://elstestserver.endicia.com/ELS/ELSServices.cfc?wsdl" : "https://www.endicia.com/ELS/ELSServices.cfc?wsdl"
     params = params.to_a.map { |i| "#{i[0]}=#{i[1]}"}.join('&')
-    "https://www.endicia.com/ELS/ELSServices.cfc?wsdl&#{params}"
+    "#{url}&#{params}"
   end
 
   def self.defaults
