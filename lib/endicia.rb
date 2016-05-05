@@ -373,6 +373,82 @@ module Endicia
     response
   end
 
+  # Pass in an options hash to get a postage rate.
+  #
+  # At minimum pass in:
+  #       MailClass: ...
+  #       ToPostalCode: ...
+  #       FromPostalCode: ...
+  #       WeightOz: ...
+  #
+  # Also pass in other stuff for more specifics, defaults listed
+  #       DateAdvance
+  #       MailpieceShape
+  #       MailpieceDimensions
+  #         Length
+  #         Width
+  #         Height
+  #       Machinable: True
+  #       LiveAnimalSurcharge: False
+  #       ToCountryCode
+  #       Services
+  #         CertifiedMail: OFF
+  #         COD: OFF
+  #         DeliveryConfirmation: OFF
+  #         ElectronicReturnReceipt: OFF
+  #         InsuredMail: OFF
+  #         RestrictedDelivery: OFF
+  #         ReturnReceipt: OFF
+  #         SignatureConfirmation: OFF
+  #         AdultSignature: OFF
+  #         AdultSignatureRestrictedDelivery: OFF
+  #       CODAmount
+  #       InsuredValue
+  #
+  # Returns a hash in the form:
+  #
+  #     {
+  #       :success => true or false
+  #       :error_message => "the message" or nil
+  #       :response_body => Raw response data from endicia
+  #       :price => price data
+  #     }
+  def self.calculate_postage_rate(opts = {})
+    opts[:Test] ||= "NO"
+    url = "#{label_service_url(opts)}/CalculatePostageRateXML"
+    insurance = extract_insurance(opts)
+    handle_extended_zip_code(opts)
+
+    dimension_keys = :Length, :Width, :Height
+    mailpiece_dimenions = extract(opts, dimension_keys)
+
+    xml = Builder::XmlMarkup.new
+    body = "postageRateRequestXML=" + xml.PostageRateRequest do |xm|
+      xm.RequesterID(opts.delete(:RequesterID) || defaults[:RequesterID])
+      xm.CertifiedIntermediary do |ci|
+        ci.AccountID(opts.delete(:AccountID) || defaults[:AccountID])
+        ci.PassPhrase(opts.delete(:PassPhrase) || defaults[:PassPhrase])
+      end
+      opts.each { |key, value| xm.tag!(key, value) }
+      xm.Services({ :InsuredMail => insurance }) if insurance
+      unless mailpiece_dimenions.empty?
+        xm.MailpieceDimensions do |md|
+          mailpiece_dimenions.each { |key, value| md.tag!(key, value) }
+        end
+      end
+    end
+
+    result = self.post(url, :body => body)
+
+    parsed = parse_result(result, "PostageRateResponse")
+
+    if parsed[:success]
+      parsed[:price] = result["PostageRateResponse"]["Postage"]["Rate"]
+    end
+
+    parsed
+  end
+
   # Pass in a options hash to get all the rates available.
   # 
   # At minimum pass in:
